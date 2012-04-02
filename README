@@ -1,0 +1,55 @@
+CIS 551 Project 3: Secure Distributed Banking
+
+# Group Member
+
+- Kuan Ting Chen (kche)
+
+- Alen Kubati (kubatial)
+
+- Ritwik Lodhiya (rlodhiya)
+
+# Instructions
+
+Run the program by typing the following on terminal: `java ATMClient ATM# BankServer`
+
+
+
+# Overview
+
+There are three main components to the project: authentication, transaction protocol, and cryptographic audit log. 
+
+## Customer-Server Authentication
+
+Authenticate user and obtain account # and ATM identifier and establish the shared session key with the ATM
+
+Customer has the private key
+ATM has public key
+Server has the public key
+
+(1) ATM and Server use the public key as shared key to perform authentication.
+(2) ATM 
+
+
+
+
+
+
+
+## Server-ATM Authentication
+
+Obtain account owner's name and establish a AES session key with server
+
+
+
+
+## Transaction Protocol
+
+Transaction protocol is based on AES shared key encryption, and RSA-based digital signatures (Signed and encrypted).
+
+
+
+
+## Cryptographic Audit Log
+
+
+
