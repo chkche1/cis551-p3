@@ -1,6 +1,7 @@
 import java.net.*;
 import java.io.*;
 import java.security.*;
+import java.util.Random;
 
 public class BankSession implements Session, Runnable {
 	private Socket s;
@@ -18,7 +19,9 @@ public class BankSession implements Session, Runnable {
 	private String atmID;
 
 	// Add additional fields you need here
+	private Random rand;
 	private boolean init_flag;
+	private Integer challenge;
 
 	BankSession(Socket s, AccountDB a, KeyPair p)
 	throws IOException
@@ -33,6 +36,7 @@ public class BankSession implements Session, Runnable {
 		this.kPubBank = p.getPublic();
 		this.crypto = new Crypto();
 		this.init_flag = false;
+		this.rand = new Random();
 	}
 
 	public void run() {
@@ -72,7 +76,7 @@ public class BankSession implements Session, Runnable {
 					break;
 				}
 				
-			}
+			}// end of while
 			
 			
 		} catch (IOException e) {
@@ -112,18 +116,59 @@ public class BankSession implements Session, Runnable {
 	private int processInit(ProtocolMessage pm){
 		if(!init_flag) return 0;
 		
+		// Generate a random #, encrypt it with public key, and send it out
+		challenge = rand.nextInt();
 		
-		
-		
+		try {
+			byte[] byte_msg = crypto.encryptRSA(challenge, kPubBank);
+			ProtocolMessage p = new ProtocolMessage(MessageType.CHAL, byte_msg);
+			os.writeObject(byte_msg);
+		} catch (KeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
 		
 		return 2;
 	}
+	
+	// return 1 in case of success. return 0 otherwise.
 	private int processChal(ProtocolMessage pm){
+		// decrypt and send back response
+		try {
+			Integer atmChallenge = (Integer) crypto.decryptRSA(pm.getMessage(), kPrivBank);
+			byte[] ans = crypto.encryptRSA(atmChallenge, kPubBank);
+			ProtocolMessage rsp = new ProtocolMessage(MessageType.RESP, ans);
+		} catch (KeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 		return 0;
 	}
 	
 	private int processResp(ProtocolMessage pm){
-		return 0;
+		// decrypt and verify answer
+		Integer atmAnswer;
+		try {
+			atmAnswer = (Integer) crypto.decryptRSA(pm.getMessage(), kPrivBank);
+			if(!atmAnswer.equals(challenge)){
+				return 0;
+			}
+		} catch (KeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		return 2;
 	}
 	
 	

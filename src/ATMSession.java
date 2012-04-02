@@ -1,6 +1,7 @@
 import java.io.*;
 import java.security.*;
 import java.net.*;
+import java.util.Random;
 
 
 public class ATMSession implements Session {
@@ -17,6 +18,8 @@ public class ATMSession implements Session {
 
 	// This field is initialized during authentication
 	private Key kSession;
+	private Random rand;
+	private Integer challenge;
 
 	// Additional fields here
 
@@ -26,6 +29,7 @@ public class ATMSession implements Session {
 		this.card = card;
 		this.kBank = kBank;
 		this.crypto = new Crypto();
+		this.rand = new Random();
 		try {
 			textIn = new BufferedReader(new InputStreamReader(System.in));
 			OutputStream out =  s.getOutputStream();
@@ -62,7 +66,6 @@ public class ATMSession implements Session {
 			e.printStackTrace();
 		}
 		
-		
 		// Read loop. Interactive from this point on
 		try {
 			while((msg = (ProtocolMessage) is.readObject()) != null){
@@ -82,12 +85,7 @@ public class ATMSession implements Session {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
-		
-		
-		
-		
-		
+
 		return authOutcome;
 	}
 
@@ -119,12 +117,60 @@ public class ATMSession implements Session {
 		return 0;
 	}
 	
+	// return 0 or 2
 	private int processChal(ProtocolMessage pm){
-		return 0;
+		
+		// Decrypt it and send back the answer
+		try {
+			Integer bankChallenge = (Integer)crypto.decryptRSA(pm.getMessage(), kUser);
+			byte[] ans = crypto.encryptRSA(bankChallenge, kBank);
+			ProtocolMessage rsp = new ProtocolMessage(MessageType.RESP, ans);
+		} catch (KeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return 0;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		// Send out challenge
+		challenge = rand.nextInt();
+		byte[] byte_msg;
+		try {
+			byte_msg = crypto.encryptRSA(challenge, kBank);
+			ProtocolMessage c = new ProtocolMessage(MessageType.CHAL, byte_msg);
+			os.writeObject(c);
+		} catch (KeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return 0;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return 2;
 	}
 	
+	// return 0 or 1
 	private int processResp(ProtocolMessage pm){
-		return 0;
+		// decrypt and verify answer
+		Integer bankAnswer;
+		try {
+			bankAnswer = (Integer) crypto.decryptRSA(pm.getMessage(), kUser);
+			if(!bankAnswer.equals(challenge)){
+				return 0;
+			}
+		} catch (KeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		return 2;
 	}
 	
 	void printMenu() {
