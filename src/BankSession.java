@@ -44,18 +44,24 @@ public class BankSession implements Session, Runnable {
 	}
 
 	public void run() {
+		boolean temp;
 		try {
 			if (authenticateUser()) {
-				while (doTransaction()) {
+				while ((temp = doTransaction())) {
 					// loop
+					System.out.println("loop");
 				}
+				System.out.println(temp);
 			}
 			//is.close();
 			//os.close();
+			System.out.println("last line of run");
 		} 
 		catch (Exception e) {
 			e.printStackTrace();
 		}
+		
+		System.out.println("end");
 	}
 
 	// Interacts with an ATMclient to 
@@ -98,7 +104,7 @@ public class BankSession implements Session, Runnable {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
+		System.out.println("BankSession authOutcome: "+authOutcome);
 		return authOutcome;
 	}
 
@@ -107,6 +113,8 @@ public class BankSession implements Session, Runnable {
 	// 2 - continue processing more messages
 	private int processMessage(ProtocolMessage pm){
 		int result = 2;
+		System.out.println("hello");
+
 		switch(pm.getMessageType()){
 		case INIT:
 			result = processInit(pm);
@@ -118,12 +126,14 @@ public class BankSession implements Session, Runnable {
 			result = processResp(pm);
 			break;
 		case SESS:
+			System.out.println("get to SESS");
 			result = processSess(pm);
 			break;
 		default:
 			break;
 		}
-
+		System.out.println("msg type: "+pm.getMessageType());
+		//System.out.println("result: "+result);
 		return result;
 	}
 
@@ -270,7 +280,7 @@ public class BankSession implements Session, Runnable {
 
 	// states: 0(error), 1(success), 2(continue)
 	public boolean doTransaction() {
-		boolean quit = false;
+		boolean more = true;
 		ProtocolMessage msg;
 		try {
 			while(true){
@@ -283,7 +293,7 @@ public class BankSession implements Session, Runnable {
 				if(result==0){
 					break;
 				}else if(result ==1){
-					quit = true;
+					more = false;
 					break;
 				}
 
@@ -299,10 +309,11 @@ public class BankSession implements Session, Runnable {
 		} 
 
 		// replace this code to carry out a bank transaction
-		return quit;
+		return more;
 	}
 
 	private int processTransaction(ProtocolMessage pm){
+		System.out.println("in processTransaction");
 		MessageType type = pm.getMessageType();
 		int result = 2;
 		switch(type){
@@ -325,6 +336,7 @@ public class BankSession implements Session, Runnable {
 	}
 
 	private void getBalance(){
+		System.out.println("in getBalance");
 		Double bal = currAcct.getBalance();
 		try {
 			byte[] sig = crypto.sign(bal.toString().getBytes(), kPrivBank);
@@ -346,6 +358,7 @@ public class BankSession implements Session, Runnable {
 	}// end of getBalance
 
 	private void withdraw(ProtocolMessage pm){
+		System.out.println("in withdraw");
 		Double amount;
 		try {
 			String s = (String) crypto.decryptAES(pm.getMessage(), kSession);
@@ -372,7 +385,7 @@ public class BankSession implements Session, Runnable {
 	}// end of withdraw
 
 	private void deposit(ProtocolMessage pm){
-		
+		System.out.println("in deposit");
 		Double amount;
 		try {
 			String s = (String) crypto.decryptAES(pm.getMessage(), kSession);

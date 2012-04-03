@@ -331,7 +331,7 @@ public class ATMSession implements Session {
 				byte[] encrypted = msg.getMessage();
 				String bal = new String((byte[])crypto.decryptAES(encrypted, kSession));
 				System.out.println("Deposit is complete. Your balance is: "+bal);
-			
+				break;
 			} catch (KeyException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -377,7 +377,7 @@ public class ATMSession implements Session {
 				byte[] encrypted = msg.getMessage();
 				String bal = new String((byte[])crypto.decryptAES(encrypted, kSession));
 				System.out.println("Withdrawal is complete. Your balance is: "+bal);
-			
+				break;
 			} catch (KeyException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -411,7 +411,7 @@ public class ATMSession implements Session {
 				String bal = new String((byte[])crypto.decryptAES(encrypted, kSession));
 				byte[] sig = msg.getSignature();
 				System.out.println("Your balance is: "+bal);
-				
+				break;
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
