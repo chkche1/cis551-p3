@@ -245,6 +245,7 @@ public class ATMSession implements Session {
 
 		try {
 			kSession = (Key)crypto.decryptRSA(pm.getMessage(), kUser);
+			System.out.println("kSession key: "+kSession);
 
 		} catch (KeyException e) {
 			// TODO Auto-generated catch block

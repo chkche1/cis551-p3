@@ -51,7 +51,6 @@ public class BankSession implements Session, Runnable {
 					// loop
 					System.out.println("loop");
 				}
-				System.out.println(temp);
 			}
 			//is.close();
 			//os.close();
@@ -79,16 +78,20 @@ public class BankSession implements Session, Runnable {
 		try {
 			while(true){
 				msg = (ProtocolMessage)is.readObject();
+				System.out.println("msg type: "+msg.getMessageType());
+				/*
 				if(msg==null){
 					System.out.println("null!");
 					continue;
-				}
-				//System.out.println("not null");
+				}*/
 				int result = processMessage(msg);
 				if(result==0){
 					init_flag = false;
+					System.out.println("result is 0");
 					break;
 				}else if(result ==1){
+					System.out.println("result is 1");
+
 					authOutcome = true;
 					break;
 				}
@@ -113,7 +116,6 @@ public class BankSession implements Session, Runnable {
 	// 2 - continue processing more messages
 	private int processMessage(ProtocolMessage pm){
 		int result = 2;
-		System.out.println("hello");
 
 		switch(pm.getMessageType()){
 		case INIT:
@@ -132,7 +134,7 @@ public class BankSession implements Session, Runnable {
 		default:
 			break;
 		}
-		System.out.println("msg type: "+pm.getMessageType());
+		//System.out.println("msg type: "+pm.getMessageType());
 		//System.out.println("result: "+result);
 		return result;
 	}
@@ -146,8 +148,8 @@ public class BankSession implements Session, Runnable {
 		// lookup account in acct.db
 		try {
 			Integer aNum = (Integer)crypto.decryptRSA(pm.getMessage(), kPrivBank);
-			Account acct = accts.getAccount(""+aNum);
-			kPubAcct = acct.getKey();
+			currAcct = accts.getAccount(""+aNum);
+			kPubAcct = currAcct.getKey();
 			System.out.println("account number: "+aNum);
 		} catch (AccountException e1) {
 			// TODO Auto-generated catch block
@@ -210,7 +212,7 @@ public class BankSession implements Session, Runnable {
 
 		System.out.println("===============================");
 
-		return 0;
+		return 2;
 	}
 
 	private int processResp(ProtocolMessage pm){
@@ -255,6 +257,7 @@ public class BankSession implements Session, Runnable {
 			Integer id = (Integer)crypto.decryptRSA(pm.getMessage(), kPrivBank);
 			atmID = id+"";
 			kSession = crypto.makeAESKey();
+			System.out.println("kSession key: "+kSession);
 			byte[] encrypted_sess;
 			encrypted_sess = crypto.encryptRSA(kSession, kPubAcct);
 			ProtocolMessage p = new ProtocolMessage(MessageType.SESS,encrypted_sess);
@@ -298,6 +301,8 @@ public class BankSession implements Session, Runnable {
 				}
 
 			}// end of while
+		}catch(SocketException e){
+			System.out.println("socket");
 		}catch(EOFException e){
 			System.out.println("EOFException");
 		}catch (IOException e) {
@@ -308,6 +313,7 @@ public class BankSession implements Session, Runnable {
 			e.printStackTrace();
 		} 
 
+		System.out.println("out of trans loop");
 		// replace this code to carry out a bank transaction
 		return more;
 	}
@@ -337,7 +343,7 @@ public class BankSession implements Session, Runnable {
 
 	private void getBalance(){
 		System.out.println("in getBalance");
-		Double bal = currAcct.getBalance();
+		Double bal = new Double(currAcct.getBalance());
 		try {
 			byte[] sig = crypto.sign(bal.toString().getBytes(), kPrivBank);
 			byte[] encrypted = crypto.encryptAES(bal.toString().getBytes(), kSession);
