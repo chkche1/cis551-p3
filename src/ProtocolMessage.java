@@ -1,16 +1,17 @@
-import java.security.*;
+import java.io.Serializable;
 
-public class ProtocolMessage {
+
+public class ProtocolMessage implements Serializable{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private MessageType type;
 	private byte[] message;
-	private Integer acctNum;
-	private Integer atmNum;
+	private byte[] signature;
 	
-	
-	public ProtocolMessage(MessageType type, Integer attribute){
+	public ProtocolMessage(MessageType type){
 		this.type = type;
-		if(attribute.equals(MessageType.INIT)) this.acctNum = attribute;
-		else this.atmNum = attribute;
 	}
 	
 	public ProtocolMessage(MessageType type, byte[] msg){
@@ -18,15 +19,10 @@ public class ProtocolMessage {
 		this.message = msg;
 	}
 	
-	public Integer getAtmNum(){
-		if(this.type!=MessageType.SESS) return null;
-		return this.atmNum;
-	}
-	
-	public Integer getAccoutNum(){
-		if(this.type!=MessageType.INIT) return null;
-		
-		return this.acctNum;
+	public ProtocolMessage(MessageType type, byte[] msg, byte[] sig){
+		this.type = type;
+		this.message = msg;
+		this.signature = sig;
 	}
 	
 	public MessageType getMessageType(){
@@ -35,6 +31,10 @@ public class ProtocolMessage {
 	
 	public byte[] getMessage(){
 		return this.message;
+	}
+	
+	public byte[] getSignature(){
+		return this.signature;
 	}
 	
 }

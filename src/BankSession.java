@@ -12,7 +12,7 @@ public class BankSession implements Session, Runnable {
 	private Crypto crypto;
 	private PrivateKey kPrivBank;
 	private PublicKey  kPubBank;
-	
+
 	private PublicKey kPubAcct;
 
 	// These fields are initialized during authentication
@@ -50,8 +50,8 @@ public class BankSession implements Session, Runnable {
 					// loop
 				}
 			}
-			is.close();
-			os.close();
+			//is.close();
+			//os.close();
 		} 
 		catch (Exception e) {
 			e.printStackTrace();
@@ -66,34 +66,42 @@ public class BankSession implements Session, Runnable {
 	// (4) Returns true if the user authentication succeeds, false otherwise
 	public boolean authenticateUser() {
 		boolean authOutcome = false;
-		
+
 		// waiting for first message.
 		ProtocolMessage msg;
-		
+
 		try {
-			while( (msg=(ProtocolMessage)is.readObject()) != null){
+			while(true){
+				msg = (ProtocolMessage)is.readObject();
+				if(msg==null){
+					System.out.println("null!");
+					continue;
+				}
+				//System.out.println("not null");
 				int result = processMessage(msg);
 				if(result==0){
+					init_flag = false;
 					break;
 				}else if(result ==1){
 					authOutcome = true;
 					break;
 				}
-				
+
 			}// end of while
-			
-			
-		} catch (IOException e) {
+
+		}catch(EOFException e){
+			System.out.println("EOFException");
+		}catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (ClassNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 		return authOutcome;
 	}
-	
+
 	// 0 - error state, auth failed
 	// 1 - success
 	// 2 - continue processing more messages
@@ -115,19 +123,22 @@ public class BankSession implements Session, Runnable {
 		default:
 			break;
 		}
-		
+
 		return result;
 	}
-	
+
 	// should send a challenge to ATM and return 2. Otherwise, return 0
 	private int processInit(ProtocolMessage pm){
-		if(!init_flag) return 0;
-		
+		System.out.println("in BankSession INIT");
+
+		init_flag = true;
+
 		// lookup account in acct.db
 		try {
 			Integer aNum = (Integer)crypto.decryptRSA(pm.getMessage(), kPrivBank);
 			Account acct = accts.getAccount(""+aNum);
 			kPubAcct = acct.getKey();
+			System.out.println("account number: "+aNum);
 		} catch (AccountException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
@@ -138,14 +149,16 @@ public class BankSession implements Session, Runnable {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 		// Generate a random #, encrypt it with public key, and send it out
 		challenge = rand.nextInt();
-		
+		System.out.println("challenge: "+challenge);
+
 		try {
 			byte[] byte_msg = crypto.encryptRSA(challenge, kPubAcct);
 			ProtocolMessage p = new ProtocolMessage(MessageType.CHAL, byte_msg);
-			os.writeObject(byte_msg);
+			os.writeObject(p);
+			os.flush();
 		} catch (KeyException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -153,18 +166,30 @@ public class BankSession implements Session, Runnable {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
-		
+
+		System.out.println("===============================");
+
 		return 2;
 	}
-	
+
 	// return 1 in case of success. return 0 otherwise.
 	private int processChal(ProtocolMessage pm){
+		System.out.println("in BankSession CHAL");
+
+		if(!init_flag){
+			System.out.println("===============================");
+
+			return 0;
+		}
+
 		// decrypt and send back response
 		try {
 			Integer atmChallenge = (Integer) crypto.decryptRSA(pm.getMessage(), kPrivBank);
+			System.out.println("atmChallenge: "+atmChallenge);
 			byte[] ans = crypto.encryptRSA(atmChallenge, kPubAcct);
 			ProtocolMessage rsp = new ProtocolMessage(MessageType.RESP, ans);
 			os.writeObject(rsp);
+			os.flush();
 		} catch (KeyException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -172,16 +197,27 @@ public class BankSession implements Session, Runnable {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
+		System.out.println("===============================");
+
 		return 0;
 	}
-	
+
 	private int processResp(ProtocolMessage pm){
+		System.out.println("in BankSession RESP");
+
+		if(!init_flag) {
+			System.out.println("===============================");
+			return 0;
+		}
+
+
 		// decrypt and verify answer
 		Integer atmAnswer;
 		try {
 			atmAnswer = (Integer) crypto.decryptRSA(pm.getMessage(), kPrivBank);
 			if(!atmAnswer.equals(challenge)){
+				System.out.println("===============================");
 				return 0;
 			}
 		} catch (KeyException e) {
@@ -193,12 +229,18 @@ public class BankSession implements Session, Runnable {
 		}
 
 		isAuth = true;
+		System.out.println("===============================");
 		return 2;
 	}
-	
+
 	private int processSess(ProtocolMessage pm){
-		if(!isAuth) return 0;
-		
+		System.out.println("in BankSession SESS");
+
+		if(!init_flag || !isAuth) {
+			System.out.println("===============================");
+			return 0;
+		}
+
 		try {
 			Integer id = (Integer)crypto.decryptRSA(pm.getMessage(), kPrivBank);
 			atmID = id+"";
@@ -207,6 +249,92 @@ public class BankSession implements Session, Runnable {
 			encrypted_sess = crypto.encryptRSA(kSession, kPubAcct);
 			ProtocolMessage p = new ProtocolMessage(MessageType.SESS,encrypted_sess);
 			os.writeObject(p);
+			os.flush();
+		} catch (KeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		System.out.println("===============================");
+
+		return 1;
+	}
+
+
+	// Interacts with an ATMclient to 
+	// (1) Perform a transaction 
+	// (2) or end transactions if end-of-session message is received
+	// (3) Maintain a log of the information exchanged with the client
+
+	// states: 0(error), 1(success), 2(continue)
+	public boolean doTransaction() {
+		boolean quit = false;
+		ProtocolMessage msg;
+		try {
+			while(true){
+				msg = (ProtocolMessage)is.readObject();
+				if(msg==null){
+					System.out.println("null!");
+					continue;
+				}
+				int result = processTransaction(msg);
+				if(result==0){
+					break;
+				}else if(result ==1){
+					quit = true;
+					break;
+				}
+
+			}// end of while
+		}catch(EOFException e){
+			System.out.println("EOFException");
+		}catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+
+		// replace this code to carry out a bank transaction
+		return quit;
+	}
+
+	private int processTransaction(ProtocolMessage pm){
+		MessageType type = pm.getMessageType();
+		int result = 2;
+		switch(type){
+		case TRAN_B:
+			getBalance();
+			break;
+		case TRAN_W:
+			withdraw(pm);
+			break;
+		case TRAN_D:
+			deposit(pm);
+			break;
+		case TRAN_Q:
+			result = 1;
+		default:
+			result = 0;
+		} // end of switch
+		return result;
+
+	}
+
+	private void getBalance(){
+		Double bal = currAcct.getBalance();
+		try {
+			byte[] sig = crypto.sign(bal.toString().getBytes(), kPrivBank);
+			byte[] encrypted = crypto.encryptAES(bal.toString().getBytes(), kSession);
+			ProtocolMessage p = new ProtocolMessage(MessageType.TRAN_B, encrypted, sig);
+			os.writeObject(p);
+			os.flush();
+		} catch (SignatureException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		} catch (KeyException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -215,18 +343,56 @@ public class BankSession implements Session, Runnable {
 			e.printStackTrace();
 		}
 		
-		return 1;
-	}
-	
-	
-	// Interacts with an ATMclient to 
-	// (1) Perform a transaction 
-	// (2) or end transactions if end-of-session message is received
-	// (3) Maintain a log of the information exchanged with the client
-	public boolean doTransaction() {
+	}// end of getBalance
 
-		// replace this code to carry out a bank transaction
-		return false;
-	}
+	private void withdraw(ProtocolMessage pm){
+		Double amount;
+		try {
+			String s = (String) crypto.decryptAES(pm.getMessage(), kSession);
+			amount = new Double(s);
+			currAcct.withdraw(amount);
+			Double bal = currAcct.getBalance();
+			String t = bal.toString();
+			byte[] encrypted = crypto.encryptAES(t, kSession);
+			ProtocolMessage p = new ProtocolMessage(MessageType.TRAN_W, encrypted);
+			os.writeObject(p);
+			os.flush();
+			
+		} catch (KeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (TransException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}// end of withdraw
+
+	private void deposit(ProtocolMessage pm){
+		
+		Double amount;
+		try {
+			String s = (String) crypto.decryptAES(pm.getMessage(), kSession);
+			amount = new Double(s);
+			currAcct.deposit(amount);
+			Double bal = currAcct.getBalance();
+			String t = bal.toString();
+			byte[] encrypted = crypto.encryptAES(t, kSession);
+			ProtocolMessage p = new ProtocolMessage(MessageType.TRAN_D, encrypted);
+			os.writeObject(p);
+			os.flush();
+			
+		} catch (KeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}// end of deposit
+	
 }
-
