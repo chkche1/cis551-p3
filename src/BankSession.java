@@ -367,8 +367,7 @@ public class BankSession implements Session, Runnable {
 		System.out.println("in withdraw");
 		Double amount;
 		try {
-			String s = (String) crypto.decryptAES(pm.getMessage(), kSession);
-			amount = new Double(s);
+			amount = (Double) crypto.decryptAES(pm.getMessage(), kSession);
 			currAcct.withdraw(amount);
 			Double bal = currAcct.getBalance();
 			String t = bal.toString();
@@ -394,8 +393,7 @@ public class BankSession implements Session, Runnable {
 		System.out.println("in deposit");
 		Double amount;
 		try {
-			String s = (String) crypto.decryptAES(pm.getMessage(), kSession);
-			amount = new Double(s);
+			amount = (Double) crypto.decryptAES(pm.getMessage(), kSession);
 			currAcct.deposit(amount);
 			Double bal = currAcct.getBalance();
 			String t = bal.toString();

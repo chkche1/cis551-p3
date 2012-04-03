@@ -85,9 +85,6 @@ public class ATMSession implements Session {
 						break;
 					}else if(result == 1){
 						authOutcome = true;
-						
-						// authenticated. sens SESS msg to establish session key with Bank
-						sendSESSMessage();
 						break;
 					}
 				//}
@@ -110,6 +107,19 @@ public class ATMSession implements Session {
 			e.printStackTrace();
 		} 
 
+		// authenticated. sens SESS msg to establish session key with Bank
+		sendSESSMessage();
+		try {
+			ProtocolMessage sess = (ProtocolMessage) is.readObject();
+			processMessage(sess);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 		return authOutcome;
 	}
 	
@@ -330,7 +340,7 @@ public class ATMSession implements Session {
 			try {
 				ProtocolMessage msg = (ProtocolMessage)is.readObject();
 				byte[] encrypted = msg.getMessage();
-				String bal = new String((byte[])crypto.decryptAES(encrypted, kSession));
+				String bal = (String) crypto.decryptAES(encrypted, kSession);
 				System.out.println("Deposit is complete. Your balance is: "+bal);
 				break;
 			} catch (KeyException e) {
@@ -376,7 +386,7 @@ public class ATMSession implements Session {
 			try {
 				ProtocolMessage msg = (ProtocolMessage)is.readObject();
 				byte[] encrypted = msg.getMessage();
-				String bal = new String((byte[])crypto.decryptAES(encrypted, kSession));
+				String bal = (String)crypto.decryptAES(encrypted, kSession);
 				System.out.println("Withdrawal is complete. Your balance is: "+bal);
 				break;
 			} catch (KeyException e) {
