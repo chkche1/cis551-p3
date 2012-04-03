@@ -1,4 +1,4 @@
 
 public enum MessageType {
-	INIT, CHAL, RESP, TRAN
+	INIT, CHAL, RESP, SESS, TRAN
 }

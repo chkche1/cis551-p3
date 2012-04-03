@@ -58,16 +58,11 @@ public class ATMSession implements Session {
 		boolean authOutcome = false;
 		
 		// Send the init msg to bank
-		ProtocolMessage msg = new ProtocolMessage(MessageType.INIT);
-		try {
-			os.writeObject(msg);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
 		// Read loop. Interactive from this point on
 		try {
+			byte[] encrypted_acctNum = crypto.encryptRSA(new Integer(card.getAcctNum()), kBank);
+			ProtocolMessage msg = new ProtocolMessage(MessageType.INIT, encrypted_acctNum);
+			os.writeObject(msg);			
 			while((msg = (ProtocolMessage) is.readObject()) != null){
 				int result = processMessage(msg);
 				if(result==0){
@@ -77,15 +72,42 @@ public class ATMSession implements Session {
 					break;
 				}
 				
-			}
+			} // end of while
+			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (ClassNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		} catch (NumberFormatException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (KeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 
+		if(authOutcome){
+			// Initialize a SESS ProtocolMessage
+			try {
+				byte[] encrypted_id = crypto.encryptRSA(new Integer(ID), kBank);
+				ProtocolMessage p = new ProtocolMessage(MessageType.SESS, encrypted_id);
+				os.writeObject(p);
+			} catch (NumberFormatException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			} catch (KeyException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			
+		}// end of if
+		
+		
 		return authOutcome;
 	}
 
@@ -103,6 +125,9 @@ public class ATMSession implements Session {
 			break;
 		case RESP:
 			result = processResp(pm);
+			break;
+		case SESS:
+			result = processSess(pm);
 			break;
 		default:
 			break;
@@ -125,6 +150,7 @@ public class ATMSession implements Session {
 			Integer bankChallenge = (Integer)crypto.decryptRSA(pm.getMessage(), kUser);
 			byte[] ans = crypto.encryptRSA(bankChallenge, kBank);
 			ProtocolMessage rsp = new ProtocolMessage(MessageType.RESP, ans);
+			os.writeObject(rsp);
 		} catch (KeyException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -170,7 +196,21 @@ public class ATMSession implements Session {
 			e.printStackTrace();
 		}
 
-		return 2;
+		return 1;
+	}
+	
+	private int processSess(ProtocolMessage pm){
+		try {
+			kSession = (Key)crypto.decryptRSA(pm.getMessage(), kUser);
+			
+		} catch (KeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return 1;
 	}
 	
 	void printMenu() {
