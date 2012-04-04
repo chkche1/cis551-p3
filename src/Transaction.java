@@ -9,6 +9,9 @@ public class Transaction implements Serializable{
 	private static final long serialVersionUID = 1L;
 	public MessageType type;
 	public double amount;
+	byte[] amt;
+	byte[] bal;
+	byte[] ts;
 	public double balance;
 	public Date timestamp;
 	
@@ -19,4 +22,10 @@ public class Transaction implements Serializable{
 		this.timestamp = ts;
 	}
 	
+	public Transaction(MessageType t, byte[] a, byte[] b, byte[] d){
+		this.type = t;
+		this.amt = a;
+		this.bal =b;
+		this.ts = d;
+	}
 }

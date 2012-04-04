@@ -13,7 +13,7 @@ public class BankServer {
 	static {
 		try {
 			pair = (KeyPair)Disk.load(keyPairFile);
-			log = new Log(logFile, pair.getPublic());
+			//log = new Log(logFile, pair.getPublic());
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.exit(1);

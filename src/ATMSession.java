@@ -303,6 +303,11 @@ public class ATMSession implements Session {
 
 	void endSession() {
 		try {
+			//send TRAN_Q message
+			ProtocolMessage q = new ProtocolMessage(MessageType.TRAN_Q);
+			os.writeObject(q);
+			
+			// close socket
 			os.close();
 			is.close();
 		} catch (IOException e) {

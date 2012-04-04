@@ -56,15 +56,15 @@ public class BankSession implements Session, Runnable {
 					System.out.println("loop");
 				}
 			}
-			//is.close();
-			//os.close();
-			System.out.println("last line of run");
+			is.close();
+			os.close();
+			System.out.println("BankSession Completed");
 		} 
 		catch (Exception e) {
 			e.printStackTrace();
 		}
 		
-		System.out.println("end");
+		System.out.println("End");
 	}
 
 	// Interacts with an ATMclient to 
@@ -338,6 +338,7 @@ public class BankSession implements Session, Runnable {
 			deposit(pm);
 			break;
 		case TRAN_Q:
+			logger.toDisk();
 			result = 1;
 			break;
 		default:
@@ -384,7 +385,7 @@ public class BankSession implements Session, Runnable {
 			byte[] encrypted = crypto.encryptAES(t, kSession);
 			logger.write(new Transaction(MessageType.TRAN_W, amount, bal, new Date()));
 			ProtocolMessage p = new ProtocolMessage(MessageType.TRAN_W, encrypted);
-			logger.read();
+			//logger.read();
 			os.writeObject(p);
 			os.flush();
 			
@@ -412,7 +413,7 @@ public class BankSession implements Session, Runnable {
 			byte[] encrypted = crypto.encryptAES(t, kSession);
 			logger.write(new Transaction(MessageType.TRAN_D, amount, bal, new Date()));
 			ProtocolMessage p = new ProtocolMessage(MessageType.TRAN_D, encrypted);
-			logger.read();
+			//logger.read();
 			os.writeObject(p);
 			os.flush();
 			

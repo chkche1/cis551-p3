@@ -21,6 +21,7 @@ public class Disk {
 		return obj;
 	}
 
+	/*
 	public static List<Object> read(String objFile)throws IOException{
 		FileInputStream fis = new FileInputStream(objFile);
 		ObjectInputStream ois = new ObjectInputStream(fis);
@@ -39,7 +40,7 @@ public class Disk {
 		ois.close();
 		fis.close();
 		return li;
-	}
+	}*/
 
 
 	public static void save(Serializable obj, String objFile) 
