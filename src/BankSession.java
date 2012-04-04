@@ -1,6 +1,7 @@
 import java.net.*;
 import java.io.*;
 import java.security.*;
+import java.util.Date;
 import java.util.Random;
 
 public class BankSession implements Session, Runnable {
@@ -14,7 +15,9 @@ public class BankSession implements Session, Runnable {
 	private PublicKey  kPubBank;
 
 	private PublicKey kPubAcct;
-
+	private Log logger;
+	
+	
 	// These fields are initialized during authentication
 	private Key kSession;
 	private Account currAcct;
@@ -41,6 +44,7 @@ public class BankSession implements Session, Runnable {
 		this.init_flag = false;
 		this.isAuth = false;
 		this.rand = new Random();
+		this.logger = null;
 	}
 
 	public void run() {
@@ -283,6 +287,7 @@ public class BankSession implements Session, Runnable {
 
 	// states: 0(error), 1(success), 2(continue)
 	public boolean doTransaction() {
+		logger = new Log(currAcct.getNumber()+".log", kPubBank);
 		boolean more = true;
 		ProtocolMessage msg;
 		try {
@@ -334,20 +339,25 @@ public class BankSession implements Session, Runnable {
 			break;
 		case TRAN_Q:
 			result = 1;
+			break;
 		default:
 			result = 0;
 		} // end of switch
 		return result;
 
 	}
-
+	
 	private void getBalance(){
 		System.out.println("in getBalance");
 		Double bal = new Double(currAcct.getBalance());
 		try {
 			byte[] sig = crypto.sign(bal.toString().getBytes(), kPrivBank);
 			byte[] encrypted = crypto.encryptAES(bal.toString().getBytes(), kSession);
+			
+			// write to log and send info back to ATM
+			logger.write(new Transaction(MessageType.TRAN_B, 0, bal, new Date()));
 			ProtocolMessage p = new ProtocolMessage(MessageType.TRAN_B, encrypted, sig);
+			//logger.read();
 			os.writeObject(p);
 			os.flush();
 		} catch (SignatureException e) {
@@ -372,7 +382,9 @@ public class BankSession implements Session, Runnable {
 			Double bal = currAcct.getBalance();
 			String t = bal.toString();
 			byte[] encrypted = crypto.encryptAES(t, kSession);
+			logger.write(new Transaction(MessageType.TRAN_W, amount, bal, new Date()));
 			ProtocolMessage p = new ProtocolMessage(MessageType.TRAN_W, encrypted);
+			logger.read();
 			os.writeObject(p);
 			os.flush();
 			
@@ -398,7 +410,9 @@ public class BankSession implements Session, Runnable {
 			Double bal = currAcct.getBalance();
 			String t = bal.toString();
 			byte[] encrypted = crypto.encryptAES(t, kSession);
+			logger.write(new Transaction(MessageType.TRAN_D, amount, bal, new Date()));
 			ProtocolMessage p = new ProtocolMessage(MessageType.TRAN_D, encrypted);
+			logger.read();
 			os.writeObject(p);
 			os.flush();
 			

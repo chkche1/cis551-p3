@@ -70,23 +70,23 @@ public class ATMSession implements Session {
 
 			//while((msg = (ProtocolMessage) is.readObject()) != null){
 			while(true){
-				
-				//if(is.available()!=0){
-					//System.out.println("has data to read");
-					msg = (ProtocolMessage) is.readObject();
-					if(msg==null){
-						System.out.println("null!");
-						continue;
-					}
-					//System.out.println("not null");
 
-					int result = processMessage(msg);
-					if(result==0){
-						break;
-					}else if(result == 1){
-						authOutcome = true;
-						break;
-					}
+				//if(is.available()!=0){
+				//System.out.println("has data to read");
+				msg = (ProtocolMessage) is.readObject();
+				if(msg==null){
+					System.out.println("null!");
+					continue;
+				}
+				//System.out.println("not null");
+
+				int result = processMessage(msg);
+				if(result==0){
+					break;
+				}else if(result == 1){
+					authOutcome = true;
+					break;
+				}
 				//}
 
 			} // end of while
@@ -119,17 +119,17 @@ public class ATMSession implements Session {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 		return authOutcome;
 	}
-	
+
 	private void sendSESSMessage(){
 		System.out.println("ATM initializing SESS msg");
 		// Initialize a SESS ProtocolMessage
 		try {
 			byte[] encrypted_id = crypto.encryptRSA(new Integer(ID), kBank);
 			ProtocolMessage p = new ProtocolMessage(MessageType.SESS, encrypted_id);
-			
+
 			os.writeObject(p);
 			os.flush();
 		} catch (NumberFormatException e1) {
@@ -205,7 +205,7 @@ public class ATMSession implements Session {
 		// Send out challenge
 		challenge = rand.nextInt();
 		System.out.println("challenge: "+challenge);
-		
+
 		byte[] byte_msg;
 		try {
 			byte_msg = crypto.encryptRSA(challenge, kBank);
@@ -333,7 +333,7 @@ public class ATMSession implements Session {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-		
+
 		// wait to read from bank
 		while(true){
 
@@ -353,9 +353,9 @@ public class ATMSession implements Session {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			
+
 		}// end of while
-		
+
 	}
 
 	void doWithdrawal() {
@@ -379,7 +379,7 @@ public class ATMSession implements Session {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-		
+
 		// wait to read from bank
 		while(true){
 
@@ -399,9 +399,9 @@ public class ATMSession implements Session {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			
+
 		}// end of while
-		
+
 	}
 
 	void doBalance() {
@@ -413,7 +413,7 @@ public class ATMSession implements Session {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 		// wait to read from bank
 		while(true){
 			try {
@@ -436,6 +436,7 @@ public class ATMSession implements Session {
 		} // end of while
 	} 
 
+	
 	public boolean doTransaction() {
 		printMenu();
 		int x = getSelection();
